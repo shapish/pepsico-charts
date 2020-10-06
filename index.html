@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<script src="node_modules/chart.js/dist/Chart.bundle.min.js"></script>
+	<title>Document</title>
+	<link href="https://fonts.googleapis.com/css2?family=Source+Sans+Pro:wght@400;600&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+	<style>
+		body, html {
+			height: 100%;
+			padding: 0;
+		}
+		body {
+			background: #EFF1EB;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			font-family: 'Source Sans Pro', sans-serif;
+			color: #444;
+			font-size: 16px;
+		}
+
+		/**
+		 * Module
+		 */
+		.module {
+			width: 504px;
+			border: solid 1px rgba(0,0,0,.15);
+			border-radius: 3px;
+			background: #fff;
+		}
+
+		/* Header */
+		.mod-header {
+			min-height: 60px;
+			position: relative;
+			padding-top: 10px;
+			box-sizing: border-box;
+		}
+		.mod-header::after {
+			content: '';
+			display: block;
+			width: calc(100% - 40px);
+			height: 1px;
+			background: rgba(0,0,0,.15);
+			position: absolute;
+			bottom: 0;
+			left: 20px;
+		}
+
+		/* Flexbox structure */
+		.mod-header .flex-wrap {
+			display: flex;
+			height: 40px;
+			margin-bottom: 10px;
+		}
+		.mod-header .flex-wrap .title {
+			flex: 1 1;
+			height: 100%;
+		}
+		.mod-header .flex-wrap .icons {
+			height: 40px;
+			flex: 0 0 220px;
+			height: 100%;
+		}
+
+		/* Title */
+		.mod-header h2 {
+			display: block;
+			line-height: 20px;
+			font-size: 18px;
+			margin: 10px 20px 10px 30px;
+		}
+
+		/* Icons */
+		.mod-header .icons .icon {
+			width: 40px;
+			height: 40px;
+			float: left;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			cursor: pointer;
+			border-radius: 3px;
+		}
+		.mod-header .icons .icon:hover {
+			background: rgba(0,0,0,.05);
+		}
+		.mod-header .icons .icon.sel {
+			color: #1E8CF4;
+		}
+
+
+		/**
+		 * Sub Navigation
+		 */
+		.subnav {
+			font-weight: 600;
+			text-transform: uppercase;
+			width: calc(100% - 40px);
+			height: 40px;
+			margin: 10px 20px 0 20px;
+			border-top: dashed 1px rgba(0,0,0,.15);
+			display: flex;
+			margin-top: -1px; /* To make dashed border-top appear on same position as solid line without subnav */
+		}
+		.module:not(.show-subnav) .subnav {
+			display: none;
+		}
+		.subnav a {
+			display: block;
+			text-decoration: none;
+			color: #444;
+			width: 33.33%;
+			text-align: center;
+			line-height: 40px;
+			opacity: .5;
+			position: relative;
+			z-index: 1;
+		}
+		.subnav a:hover {
+			opacity: 1;
+		}
+		.subnav a.sel {
+			opacity: 1;
+			cursor: default;
+		}
+		.subnav a.sel::after {
+			content: '';
+			display: block;
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			width: 100%;
+			height: 3px;
+			background: #FFD050;
+		}
+	</style>
+</head>
+<body>
+
+	<!-- Module -->
+	<div id="module-age" class="module">
+		<div class="mod-header">
+			<div class="flex-wrap">
+				<div class="title">
+					<h2>Age Range</h2>
+				</div>
+				<div class="icons">
+					<div class="icon material-icons sel" id="show-bar-chart">bar_chart</div>
+					<div class="icon material-icons" id="show-doughnut-chart">pie_chart</div>
+					<div class="icon material-icons">table_view</div>
+					<div class="icon material-icons">zoom_out_map</div>
+					<div class="icon icn-menu material-icons">more_vert</div>
+				</div>
+			</div>
+			<div class="subnav">
+				<a href="#" id="show-segment-hh-dchart">Segment HH</a>
+				<a href="#" id="show-total-hh-dchart">Total HH</a>
+				<a href="#" id="show-index-dchart">Index</a>
+			</div>
+		</div>
+		<canvas id="age-chart" width="504" height="500"></canvas>
+	</div>
+
+
+
+	<script>
+		// Click events
+		document.getElementById('show-bar-chart').addEventListener('click', e => {
+			toggleCharts('bar');
+			setSubNavSel();
+			setIconNavSel(e);
+		});
+		document.getElementById('show-doughnut-chart').addEventListener('click', e => {
+			toggleCharts('doughnut');
+			setSubNavSel();
+			setIconNavSel(e);
+		});
+		document.getElementById('show-segment-hh-dchart').addEventListener('click', e => {
+			toggleCharts('doughnut', 'shh');
+			setSubNavSel(e);
+		});
+		document.getElementById('show-total-hh-dchart').addEventListener('click', e => {
+			toggleCharts('doughnut', 'thh');
+			setSubNavSel(e);
+		});
+		document.getElementById('show-index-dchart').addEventListener('click', e => {
+			toggleCharts('doughnut', 'idx');
+			setSubNavSel(e);
+		});
+
+		// Color palettes
+		const colors = {
+			// Segment households - blue green
+			shh: '#8ECBD4',
+			shhRange: ['#CCE0F4', '#A3D3EC', '#94CBD1', '#80AFA7', '#608878'],
+			// shhRange: ['#593C47', '#77807B', '#F2B990', '#EF9F82', '#D87568'],
+
+			// Total households - pink
+			thh: '#FFCDB2',
+			thhRange: ['#FFCDB2', '#FFB4A2', '#E5989B', '#B5838D', '#6D6875'],
+			// thhRange: ['#1A5562', '#3D9594', '#C3CDA9', '#C0B49B', '#A98B82'],
+
+			// Index
+			idx: '#264653',
+			idxRange: ['#E9C46A', '#f4A261', '#E76F51', '#2A9d8F', '#264653']
+		}
+
+		// Core data
+		const ageData = {
+			// Original names from Pepsico Database:
+			// labels: ['Gen Z','Total Millennials','Gen X','Total Baby Boomers','Retirees'],
+			labels: ['Gen Z','Millennials','Gen X','Boomers','Retirees'],
+			shh: [9, 31, 35, 17, 8],
+			thh: [18, 22, 19, 21, 20],
+			idx: [83, 115, 135, 95, 65]
+		}
+
+		// $$$
+		// We must divide the index by the total amount of labels, so it displays in relationship to the bars.
+		// We can then multiply the number again when displaying it by using custom tooltip:
+		// https://www.chartjs.org/docs/latest/configuration/tooltip.html#external-custom-tooltips
+		// (not implemented)
+		ageData.idx = ageData.idx.map(i => i/ageData.labels.length);
+
+		// Bar chart data
+		var ageBarChartData = {
+			labels: ageData.labels,
+			datasets: [{
+				type: 'line',
+				label: 'Index',
+				borderWidth: 2,
+				borderColor: colors.idx,
+				data: ageData.idx,
+				fill: false,
+			}, {
+				type: 'bar',
+				label: 'Segment Households',
+				backgroundColor: colors.shh,
+				borderWidth: 0,
+				data: ageData.shh,
+			}, {
+				type: 'bar',
+				label: 'Total Households',
+				backgroundColor: colors.thh,
+				data: ageData.thh,
+				borderWidth: 0
+			}]
+
+		};
+
+		// Doughnut charts data - Combined
+		const ageDoughnutChartData = {
+			labels: ageData.labels,
+			datasets: [{
+				label: 'Index',
+				data: ageData.idx,
+				backgroundColor: colors.idxRange,
+				borderWidth: 0
+			},{
+				label: 'Total Households',
+				data: ageData.thh,
+				backgroundColor: colors.thhRange,
+				borderWidth: 0
+			},{
+				label: 'Segment Households',
+				data: ageData.shh,
+				backgroundColor: colors.shhRange,
+				borderWidth: 0
+			}]
+		}
+
+		// Doughnut charts data - Segment Households
+		const ageDoughnutChartData_shh = {
+			labels: ageData.labels,
+			datasets: [{
+				label: 'Segment Households',
+				data: ageData.shh,
+				backgroundColor: colors.shhRange,
+				borderWidth: 0
+			}]
+		}
+
+		// Doughnut charts data - Total Households
+		const ageDoughnutChartData_thh = {
+			labels: ageData.labels,
+			datasets: [{
+				label: 'Total Households',
+				data: ageData.thh,
+				backgroundColor: colors.thhRange,
+				borderWidth: 0
+			}]
+		}
+
+		// Doughnut charts data - index
+		const ageDoughnutChartData_idx = {
+			labels: ageData.labels,
+			datasets: [{
+				label: 'Index',
+				data: ageData.idx,
+				backgroundColor: colors.idxRange,
+				borderWidth: 0
+			}]
+		}
+
+		// Chart rendering options
+		const chartOptions = {
+			responsive: false,
+			animation: false,
+			tooltips: {
+				mode: 'index',
+				intersect: true
+			},
+			legend: {
+				position: 'bottom',
+				labels: {
+					padding: 20
+				}
+			},
+			layout: {
+				padding: 30
+			}
+		}
+
+		// Create canvas
+		var ctx = document.getElementById('age-chart').getContext('2d');
+
+		// Default bar chart
+		window.onload = renderBarChart();
+
+
+		//////
+
+		// Switch between charts
+		function toggleCharts(chartType, dataType) {
+			const currentChartType = window.myMixedChart ? window.myMixedChart.config.type : null;
+			chartType = chartType ? chartType : currentChartType == 'bar' ? 'doughnut' : 'bar';
+			// dataType = dataType ? dataType : 'idx';
+			
+			// Destroy previous chart
+			window.myMixedChart.destroy();
+
+			// Render new chart
+			if (chartType == 'bar') {
+				document.getElementById('module-age').classList.remove('show-subnav');
+				document.getElementById('module-age').children[1].setAttribute('height', 500);
+				renderBarChart();
+			} else if (chartType == 'doughnut') {
+				document.getElementById('module-age').classList.add('show-subnav');
+				document.getElementById('module-age').children[1].setAttribute('height', 460);
+				renderDoughnutChart(dataType);
+			} else {
+				console.log('Invalid chartType')
+			}
+		}
+
+		// Create bar chart
+		function renderBarChart() {
+			window.myMixedChart = new Chart(ctx, {
+				type: 'bar',
+				data: ageBarChartData,
+				options: chartOptions
+			});
+		};
+
+		// Create doughnut chart
+		function renderDoughnutChart(dataType) {
+			window.myMixedChart = new Chart(ctx, {
+				type: 'doughnut',
+				data: dataType ? eval(`ageDoughnutChartData_${dataType}`) : ageDoughnutChartData,
+				options: {
+					...chartOptions,
+					animation: {
+						animateScale: false,
+						animateRotate: false
+					}
+				}
+			});
+		};
+
+		// Set icon navigation selection
+		function setIconNavSel(e) {
+			var navItems = [].slice.call(document.getElementsByClassName('icons')[0].children);
+			navItems.forEach(elm => {
+				elm.classList.remove('sel');
+			});
+			if (e) e.target.classList.add('sel');
+		}
+
+		// Set sub navigation selection
+		function setSubNavSel(e) {
+			var navItems = [].slice.call(document.getElementsByClassName('subnav')[0].children);
+			navItems.forEach(elm => {
+				elm.classList.remove('sel');
+			});
+			if (e) e.target.classList.add('sel');
+		}
+	</script>
+</body>
+
+</html>
