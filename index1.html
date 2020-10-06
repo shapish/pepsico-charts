@@ -157,7 +157,7 @@
 				</div>
 			</div>
 			<div class="subnav">
-				<a href="#" id="show-segment-hh-dchart" class="sel">Segment HH</a>
+				<a href="#" id="show-segment-hh-dchart">Segment HH</a>
 				<a href="#" id="show-total-hh-dchart">Total HH</a>
 				<a href="#" id="show-index-dchart">Index</a>
 			</div>
@@ -171,10 +171,12 @@
 		// Click events
 		document.getElementById('show-bar-chart').addEventListener('click', e => {
 			toggleCharts('bar');
+			setSubNavSel();
 			setIconNavSel(e);
 		});
 		document.getElementById('show-doughnut-chart').addEventListener('click', e => {
-			toggleCharts('doughnut', 'shh');
+			toggleCharts('doughnut');
+			setSubNavSel();
 			setIconNavSel(e);
 		});
 		document.getElementById('show-segment-hh-dchart').addEventListener('click', e => {
@@ -204,27 +206,25 @@
 
 			// Index
 			idx: '#264653',
-			idxRange: ['#E9C46A', '#f4A261', '#E76F51', '#B56CA2', '#4A9AC6', '#2A9d8F', '#264653']
+			idxRange: ['#E9C46A', '#f4A261', '#E76F51', '#2A9d8F', '#264653']
 		}
-
 
 		// Core data
 		const ageData = {
 			// Original names from Pepsico Database:
 			// labels: ['Gen Z','Total Millennials','Gen X','Total Baby Boomers','Retirees'],
-			labels: ['Gen Z','Yng Mill','Old Mill','Gen X','Yng Bmr','Old Bmr','Retirees'],
-			shh: [9,19,18,26,13,6,4],
-			thh: [6,17,17,21,15,12,10]
-			// idx is calculated below
+			labels: ['Gen Z','Millennials','Gen X','Boomers','Retirees'],
+			shh: [9, 31, 35, 17, 8],
+			thh: [18, 22, 19, 21, 20],
+			idx: [83, 115, 135, 95, 65]
 		}
 
-		// $$$ NOTICE $$$
+		// $$$
 		// We must divide the index by the total amount of labels, so it displays in relationship to the bars.
 		// We can then multiply the number again when displaying it by using custom tooltip:
 		// https://www.chartjs.org/docs/latest/configuration/tooltip.html#external-custom-tooltips
 		// (not implemented)
-		ageData.idx = ageData.shh.map((n,i) => (n / ageData.thh[i] * 100) / ageData.labels.length);
-		console.log(ageData)
+		ageData.idx = ageData.idx.map(i => i/ageData.labels.length);
 
 		// Bar chart data
 		var ageBarChartData = {
@@ -398,7 +398,6 @@
 			});
 			if (e) e.target.classList.add('sel');
 		}
-
 	</script>
 </body>
 
