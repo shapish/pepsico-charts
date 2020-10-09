@@ -215,6 +215,7 @@
 				setIconNavSel();
 				document.getElementById('main-nav').getElementsByClassName('sel')[0].classList.remove('sel');
 				a.classList.add('sel');
+				e.preventDefault();
 			});
 		});
 
@@ -222,18 +223,22 @@
 		document.getElementById('show-bar-chart').addEventListener('click', e => {
 			toggleCharts(getSelProp(), 'bar');
 			setIconNavSel(e);
+			e.preventDefault();
 		});
 		document.getElementById('show-doughnut-chart').addEventListener('click', e => {
 			toggleCharts(getSelProp(), 'doughnut', 'shh');
 			setIconNavSel(e);
+			e.preventDefault();
 		});
 		document.getElementById('show-segment-hh-dchart').addEventListener('click', e => {
 			toggleCharts(getSelProp(), 'doughnut', 'shh');
 			setSubNavSel(e);
+			e.preventDefault();
 		});
 		document.getElementById('show-total-hh-dchart').addEventListener('click', e => {
 			toggleCharts(getSelProp(), 'doughnut', 'thh');
 			setSubNavSel(e);
+			e.preventDefault();
 		});
 
 
