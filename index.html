@@ -20,16 +20,43 @@
 			font-family: 'Source Sans Pro', sans-serif;
 			color: #444;
 			font-size: 16px;
+			text-align: center;
+		}
+
+		/* List */
+		#main-nav {
+			display: inline-block;
+			margin: 0 auto 30px auto;
+		}
+		#main-nav a {
+			text-decoration: none;
+			color: #444;
+			background: #fff;
+			height: 20px;
+			line-height: 20px;
+			padding: 0 8px;
+			border-radius: 2px;
+			float: left;
+			margin: 0 5px;
+			font-size: 13px;
+		}
+		#main-nav a:hover {
+			box-shadow: 3px 3px 0 rgba(0,0,0,.1);
+		}
+		#main-nav a.sel {
+			background: #444;
+			color: #fff;
 		}
 
 		/**
 		 * Module
 		 */
 		.module {
-			width: 504px;
+			width: 503px;
 			border: solid 1px rgba(0,0,0,.15);
 			border-radius: 3px;
 			background: #fff;
+			text-align: left;
 		}
 
 		/* Header */
@@ -113,7 +140,7 @@
 			display: block;
 			text-decoration: none;
 			color: #444;
-			width: 33.33%;
+			width: 150px;
 			text-align: center;
 			line-height: 40px;
 			opacity: .5;
@@ -140,6 +167,15 @@
 	</style>
 </head>
 <body>
+	<div>
+	<div id="main-nav">
+		<a href="#" data-property="age" class="sel">Age Range</a>
+		<a href="#" data-property="gender">Gender</a>
+		<a href="#" data-property="income">Income</a>
+		<a href="#" data-property="ethnicity">Ethnicity</a>
+		<a href="#" data-property="education">Education</a>
+		<a href="#" data-property="children">Children</a>
+	</div>
 
 	<!-- Module -->
 	<div id="module-age" class="module">
@@ -159,152 +195,133 @@
 			<div class="subnav">
 				<a href="#" id="show-segment-hh-dchart" class="sel">Segment HH</a>
 				<a href="#" id="show-total-hh-dchart">Total HH</a>
-				<a href="#" id="show-index-dchart">Index</a>
 			</div>
 		</div>
-		<canvas id="age-chart" width="504" height="500"></canvas>
+		<canvas id="age-chart" width="503" height="400"></canvas>
+	</div>
 	</div>
 
 
-
 	<script>
-		// Click events
+
+		/**
+		 * Click Events
+		 */
+
+		// Main navigation
+		[].slice.call(document.getElementById('main-nav').children).forEach((a, i) => {
+			a.addEventListener('click', e => {
+				toggleCharts(a.getAttribute('data-property'), 'bar');
+				setIconNavSel();
+				document.getElementById('main-nav').getElementsByClassName('sel')[0].classList.remove('sel');
+				a.classList.add('sel');
+			});
+		});
+
+		// Chart buttons
 		document.getElementById('show-bar-chart').addEventListener('click', e => {
-			toggleCharts('bar');
+			toggleCharts(getSelProp(), 'bar');
 			setIconNavSel(e);
 		});
 		document.getElementById('show-doughnut-chart').addEventListener('click', e => {
-			toggleCharts('doughnut', 'shh');
+			toggleCharts(getSelProp(), 'doughnut', 'shh');
 			setIconNavSel(e);
 		});
 		document.getElementById('show-segment-hh-dchart').addEventListener('click', e => {
-			toggleCharts('doughnut', 'shh');
+			toggleCharts(getSelProp(), 'doughnut', 'shh');
 			setSubNavSel(e);
 		});
 		document.getElementById('show-total-hh-dchart').addEventListener('click', e => {
-			toggleCharts('doughnut', 'thh');
-			setSubNavSel(e);
-		});
-		document.getElementById('show-index-dchart').addEventListener('click', e => {
-			toggleCharts('doughnut', 'idx');
+			toggleCharts(getSelProp(), 'doughnut', 'thh');
 			setSubNavSel(e);
 		});
 
-		// Color palettes
+
+
+
+		/**
+		 * Color Palette Settings
+		 */
+
 		const colors = {
-			// Segment households - blue green
-			shh: '#8ECBD4',
-			shhRange: ['#CCE0F4', '#A3D3EC', '#94CBD1', '#80AFA7', '#608878'],
-			// shhRange: ['#593C47', '#77807B', '#F2B990', '#EF9F82', '#D87568'],
-
-			// Total households - pink
-			thh: '#FFCDB2',
-			thhRange: ['#FFCDB2', '#FFB4A2', '#E5989B', '#B5838D', '#6D6875'],
-			// thhRange: ['#1A5562', '#3D9594', '#C3CDA9', '#C0B49B', '#A98B82'],
-
-			// Index
-			idx: '#264653',
-			idxRange: ['#E9C46A', '#f4A261', '#E76F51', '#B56CA2', '#4A9AC6', '#2A9d8F', '#264653']
+			shh: '#E59FB3', // Segment households - purple
+			thh: '#BADBDD', // Total households - bluegreen
+			idx: '#264653', // Index
+			ref: '#1E8CF4', // Reference line for index
+			// Doughnut chart colors (up to 15)
+			doughnutColors: ['#E9C46B','#F4A261','#E77051','#2A9D8F','#264653',
+					'#77919C','#8BD7E8','#4A9AC6','#2A539D','#B56CA2',
+					'#F28ECE','#FFC6C9','#9C6C6C','#70DBBC','#D0DB70']
 		}
+		
 
 
-		// Core data
-		const ageData = {
+
+		/**
+		 * Core chart data
+		 */
+
+		const data = {};
+
+		data.age = {
 			// Original names from Pepsico Database:
-			// labels: ['Gen Z','Total Millennials','Gen X','Total Baby Boomers','Retirees'],
+			// labels: ['Gen Z','Younger Millennials', 'Older Millennials','Gen X','Younger Baby Boomers', 'Older Baby Boomers','Retirees'],
 			labels: ['Gen Z','Yng Mill','Old Mill','Gen X','Yng Bmr','Old Bmr','Retirees'],
-			shh: [9,19,18,26,13,6,4],
-			thh: [6,17,17,21,15,12,10]
+			shh: [9,21,18,27,14,7,4],
+			thh: [7,17,17,21,15,12,11]
 			// idx is calculated below
 		}
 
+		data.gender = {
+			labels: ['Female','Male','Unknown'],
+			shh: [33, 52, 15],
+			thh: [38, 30, 32]
+		}
+
+		data.income = {
+			// Original names from Pepsico Database:
+			// labels: ['$1k-15k','$15k-25k','$25k-35k','$35k-50k','$50k-75k','$75k-100k','$100k-125k','$125k-150k','$150k-175k','$175k-200k','$200k-$250k','$250k+'],
+			labels: ['1-15k','15-25k','25-35k','35-50k','50-75k','75-100k','100-125k','125-150k','150-175k','175-200k','200-250k','250k+'],
+			shh: [8,12,20,19,15,10,7,5,2,1.49,0.5,0.01],
+			thh: [7,8,10,32,25,10,3,2,1.6,0.8,0.4,0.1]
+		}
+
+		data.ethnicity = {
+			labels: ['Afr-Amer','Asian','Caucasian','Hispanic','Other'],
+			shh: [25,12,27,22,14],
+			thh: [25,13,22,27,15]
+		}
+
+		data.education = {
+			labels: ['No High School','High School','College, No Degree','Bachelor\'s','Graduate'],
+			shh: [20,30,15,20,15],
+			thh: [28,35,13,17,8]
+		}
+
+		
+		data.children = {
+			labels: ['Young Ones (0-6)','Tweens (7-12)','Teens (13-18)'],
+			shh: [33,34,32],
+			thh: [35,32,32]
+		}
+
 		// $$$ NOTICE $$$
-		// We must divide the index by the total amount of labels, so it displays in relationship to the bars.
-		// We can then multiply the number again when displaying it by using custom tooltip:
-		// https://www.chartjs.org/docs/latest/configuration/tooltip.html#external-custom-tooltips
-		// (not implemented)
-		ageData.idx = ageData.shh.map((n,i) => (n / ageData.thh[i] * 100) / ageData.labels.length);
-		console.log(ageData)
-
-		// Bar chart data
-		var ageBarChartData = {
-			labels: ageData.labels,
-			datasets: [{
-				type: 'line',
-				label: 'Index',
-				borderWidth: 2,
-				borderColor: colors.idx,
-				data: ageData.idx,
-				fill: false,
-			}, {
-				type: 'bar',
-				label: 'Segment Households',
-				backgroundColor: colors.shh,
-				borderWidth: 0,
-				data: ageData.shh,
-			}, {
-				type: 'bar',
-				label: 'Total Households',
-				backgroundColor: colors.thh,
-				data: ageData.thh,
-				borderWidth: 0
-			}]
-
-		};
-
-		// Doughnut charts data - Combined
-		const ageDoughnutChartData = {
-			labels: ageData.labels,
-			datasets: [{
-				label: 'Index',
-				data: ageData.idx,
-				backgroundColor: colors.idxRange,
-				borderWidth: 0
-			},{
-				label: 'Total Households',
-				data: ageData.thh,
-				backgroundColor: colors.thhRange,
-				borderWidth: 0
-			},{
-				label: 'Segment Households',
-				data: ageData.shh,
-				backgroundColor: colors.shhRange,
-				borderWidth: 0
-			}]
+		// To display the index in relationship to the bars, we must divide it by the total number of labels
+		for (let property in data) {
+			data[property].idx = data[property].shh.map((n,i) => (n / data[property].thh[i] * 100) / data[property].labels.length);
+			data[property].ref = data[property].shh.map(() => 100 / data[property].labels.length);
 		}
+		console.log(data)
 
-		// Doughnut charts data - Segment Households
-		const ageDoughnutChartData_shh = {
-			labels: ageData.labels,
-			datasets: [{
-				label: 'Segment Households',
-				data: ageData.shh,
-				backgroundColor: colors.shhRange,
-				borderWidth: 0
-			}]
-		}
 
-		// Doughnut charts data - Total Households
-		const ageDoughnutChartData_thh = {
-			labels: ageData.labels,
-			datasets: [{
-				label: 'Total Households',
-				data: ageData.thh,
-				backgroundColor: colors.thhRange,
-				borderWidth: 0
-			}]
-		}
 
-		// Doughnut charts data - index
-		const ageDoughnutChartData_idx = {
-			labels: ageData.labels,
-			datasets: [{
-				label: 'Index',
-				data: ageData.idx,
-				backgroundColor: colors.idxRange,
-				borderWidth: 0
-			}]
-		}
+
+		/**
+		 * Generate charts
+		 */
+
+		// Create canvas
+		var ctx = document.getElementById('age-chart').getContext('2d');
 
 		// Chart rendering options
 		const chartOptions = {
@@ -312,7 +329,34 @@
 			animation: false,
 			tooltips: {
 				mode: 'index',
-				intersect: true
+				// intersect: true,
+				callbacks: {
+					// In order to display the index line within the range of the bars, we must
+					// divide it by the number of labels. On hover, we multiply this value again
+					// in order to display the correct index value.
+					label: (a,b) => {
+						// console.log(a)
+						// console.log(b)
+						// console.log(b.datasets[0].data[a.index] * b.labels.length)
+						// console.log(a.datasetIndex);
+						if (a.datasetIndex === 0) {
+							const index = Math.round(a.value * b.labels.length);
+							return ` Index: ${index}`;
+						} else if (a.datasetIndex != 1) {
+							return ` ${b.datasets[a.datasetIndex].label}: ${a.value}%`;
+						}
+						// 
+					},
+					// labelColor: (a,b) => {
+					// 	console.log(a.datasetIndex, b.config.data.datasets[a.datasetIndex].backgroundColor)
+					// 	return {
+					// 		// borderColor: b.datasets[a.datasetIndex].backgroundColor,
+					// 		// backgroundColor: b.datasets[a.datasetIndex].backgroundColor
+					// 		borderColor: '#fff',
+					// 		backgroundColor: 'red'
+					// 	};
+					// }
+				}
 			},
 			legend: {
 				position: 'bottom',
@@ -322,23 +366,26 @@
 			},
 			layout: {
 				padding: 30
+			},
+			scales: {
+				yAxes: [{
+					ticks: {
+						beginAtZero: true
+					}
+				}]
 			}
 		}
 
-		// Create canvas
-		var ctx = document.getElementById('age-chart').getContext('2d');
-
-		// Default bar chart
-		window.onload = renderBarChart();
-
-
-		//////
+		// Render default chart
+		window.onload = renderBarChart('age');
 
 		// Switch between charts
-		function toggleCharts(chartType, dataType) {
+		// › property = age, gender, etc.
+		// › chartType = bar/doughnut
+		// › dataType = shh, thh, idx
+		function toggleCharts(property, chartType, dataType) {
 			const currentChartType = window.myMixedChart ? window.myMixedChart.config.type : null;
 			chartType = chartType ? chartType : currentChartType == 'bar' ? 'doughnut' : 'bar';
-			// dataType = dataType ? dataType : 'idx';
 			
 			// Destroy previous chart
 			window.myMixedChart.destroy();
@@ -346,40 +393,100 @@
 			// Render new chart
 			if (chartType == 'bar') {
 				document.getElementById('module-age').classList.remove('show-subnav');
-				document.getElementById('module-age').children[1].setAttribute('height', 500);
-				renderBarChart();
+				document.getElementById('module-age').children[1].setAttribute('height', 400);
+				renderBarChart(property);
 			} else if (chartType == 'doughnut') {
 				document.getElementById('module-age').classList.add('show-subnav');
-				document.getElementById('module-age').children[1].setAttribute('height', 460);
-				renderDoughnutChart(dataType);
+				document.getElementById('module-age').children[1].setAttribute('height', 360);
+				renderDoughnutChart(property, dataType);
 			} else {
 				console.log('Invalid chartType')
 			}
 		}
 
-		// Create bar chart
-		function renderBarChart() {
+		// Render bar chart
+		function renderBarChart(property) {
 			window.myMixedChart = new Chart(ctx, {
 				type: 'bar',
-				data: ageBarChartData,
+				data: getBarChartData(property),
 				options: chartOptions
 			});
 		};
 
-		// Create doughnut chart
-		function renderDoughnutChart(dataType) {
+		// Render doughnut chart
+		function renderDoughnutChart(property, dataType) {
+			doughnutChartOptions = { ...chartOptions };
+			delete doughnutChartOptions.scales;
+			doughnutChartOptions.animation = {
+				animateScale: false,
+				animateRotate: false
+			}
 			window.myMixedChart = new Chart(ctx, {
 				type: 'doughnut',
-				data: dataType ? eval(`ageDoughnutChartData_${dataType}`) : ageDoughnutChartData,
-				options: {
-					...chartOptions,
-					animation: {
-						animateScale: false,
-						animateRotate: false
-					}
-				}
+				data: getDoughnutChartData(property, dataType),
+				options: doughnutChartOptions
 			});
 		};
+
+		// Return full data object for bar charts
+		function getBarChartData(property) {
+			return {
+			labels: data[property].labels,
+				datasets: [{
+					type: 'line',
+					label: 'Index',
+					borderWidth: 2,
+					borderColor: colors.idx,
+					backgroundColor: colors.idx,
+					data: data[property].idx,
+					fill: false,
+				}, {
+					type: 'line',
+					label: 'Ref',
+					borderWidth: 1,
+					borderColor: colors.ref,
+					data: data[property].ref,
+					fill: false,
+				}, {
+					type: 'bar',
+					label: 'Segm HH',
+					backgroundColor: colors.shh,
+					borderWidth: 0,
+					data: data[property].shh,
+				}, {
+					type: 'bar',
+					label: 'Total HH',
+					backgroundColor: colors.thh,
+					data: data[property].thh,
+					borderWidth: 0
+				}]
+			};
+		}
+
+		// Return full data object for doughnut charts
+		function getDoughnutChartData(property, dataType) {
+			return {
+				labels: data[property].labels,
+				datasets: [{
+					label: 'Segment Households',
+					data: data[property][dataType],
+					backgroundColor: colors.doughnutColors,
+					borderWidth: 0
+				}]
+			}
+		}
+
+
+
+
+		/**
+		 * Auxiliary UI functions
+		 */
+
+		// Get selected property
+		function getSelProp() {
+			return document.getElementById('main-nav').getElementsByClassName('sel')[0].getAttribute('data-property');
+		}
 
 		// Set icon navigation selection
 		function setIconNavSel(e) {
@@ -387,7 +494,12 @@
 			navItems.forEach(elm => {
 				elm.classList.remove('sel');
 			});
-			if (e) e.target.classList.add('sel');
+			if (e) {
+				e.target.classList.add('sel');
+			} else {
+				// Reset when no event is passed
+				navItems[0].classList.add('sel');
+			}
 		}
 
 		// Set sub navigation selection
