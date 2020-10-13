@@ -310,13 +310,13 @@
 			thh: [35,32,32]
 		}
 
-		// $$$ NOTICE $$$
-		// To display the index in relationship to the bars, we must divide it by the total number of labels
+		// $$ To display the index in relationship to the bars, we must divide it by the total number of labels
+		// The same goes for the reference number 100
 		for (let property in data) {
 			data[property].idx = data[property].shh.map((n,i) => (n / data[property].thh[i] * 100) / data[property].labels.length);
 			data[property].ref = data[property].shh.map(() => 100 / data[property].labels.length);
 		}
-		console.log(data)
+		console.log('Graph Data:\n', data)
 
 
 
@@ -326,42 +326,13 @@
 		 */
 
 		// Create canvas
-		var ctx = document.getElementById('age-chart').getContext('2d');
+		const ctx = document.getElementById('age-chart').getContext('2d');
 
 		// Chart rendering options
 		const chartOptions = {
 			responsive: false,
-			animation: false,
 			tooltips: {
-				mode: 'index',
-				// intersect: true,
-				callbacks: {
-					// In order to display the index line within the range of the bars, we must
-					// divide it by the number of labels. On hover, we multiply this value again
-					// in order to display the correct index value.
-					label: (a,b) => {
-						// console.log(a)
-						// console.log(b)
-						// console.log(b.datasets[0].data[a.index] * b.labels.length)
-						// console.log(a.datasetIndex);
-						if (a.datasetIndex === 0) {
-							const index = Math.round(a.value * b.labels.length);
-							return ` Index: ${index}`;
-						} else if (a.datasetIndex != 1) {
-							return ` ${b.datasets[a.datasetIndex].label}: ${a.value}%`;
-						}
-						// 
-					},
-					// labelColor: (a,b) => {
-					// 	console.log(a.datasetIndex, b.config.data.datasets[a.datasetIndex].backgroundColor)
-					// 	return {
-					// 		// borderColor: b.datasets[a.datasetIndex].backgroundColor,
-					// 		// backgroundColor: b.datasets[a.datasetIndex].backgroundColor
-					// 		borderColor: '#fff',
-					// 		backgroundColor: 'red'
-					// 	};
-					// }
-				}
+				mode: 'index'
 			},
 			legend: {
 				position: 'bottom',
@@ -371,15 +342,50 @@
 			},
 			layout: {
 				padding: 30
-			},
+			}
+		}
+
+		const barChartOptions = {
+			...chartOptions,
 			scales: {
 				yAxes: [{
 					ticks: {
 						beginAtZero: true
 					}
 				}]
-			}
+			},
+			animation: false
 		}
+
+		const doughnutChartOptions = {
+			...chartOptions,
+			callbacks: {
+				// $$ In order to display the index line within the range of the bars, we must
+				// divide it by the number of labels. On hover, we multiply this value again
+				// as to display the correct index value.
+				label: (a,b) => {
+					if (a.datasetIndex === 0) {
+						const index = Math.round(a.value * b.labels.length);
+						return ` Index: ${index}`;
+					} else if (a.datasetIndex != 1) {
+						return ` ${b.datasets[a.datasetIndex].label}: ${a.value}%`;
+					}
+				},
+				// labelColor: (a,b) => {
+				// 	console.log(a.datasetIndex, b.config.data.datasets[a.datasetIndex].backgroundColor)
+				// 	return {
+				// 		// borderColor: b.datasets[a.datasetIndex].backgroundColor,
+				// 		// backgroundColor: b.datasets[a.datasetIndex].backgroundColor
+				// 		borderColor: '#fff',
+				// 		backgroundColor: 'red'
+				// 	};
+				// }
+			},
+			animation: {
+				animateScale: false,
+				animateRotate: false
+			}
+		};
 
 		// Render default chart
 		window.onload = renderBarChart('age');
@@ -391,19 +397,22 @@
 		function toggleCharts(property, chartType, dataType) {
 			const currentChartType = window.myMixedChart ? window.myMixedChart.config.type : null;
 			chartType = chartType ? chartType : currentChartType == 'bar' ? 'doughnut' : 'bar';
-			
-			// Destroy previous chart
-			window.myMixedChart.destroy();
 
 			// Render new chart
 			if (chartType == 'bar') {
 				document.getElementById('module-age').classList.remove('show-subnav');
 				document.getElementById('module-age').children[1].setAttribute('height', 400);
+				window.myMixedChart.destroy(); // Destroy previous chart
 				renderBarChart(property);
 			} else if (chartType == 'doughnut') {
-				document.getElementById('module-age').classList.add('show-subnav');
-				document.getElementById('module-age').children[1].setAttribute('height', 360);
-				renderDoughnutChart(property, dataType);
+				if (currentChartType == 'doughnut') {
+					updateDoughnutChart(property, dataType);
+				} else {
+					document.getElementById('module-age').classList.add('show-subnav');
+					document.getElementById('module-age').children[1].setAttribute('height', 360);
+					window.myMixedChart.destroy(); // Destroy previous chart
+					renderDoughnutChart(property, dataType);
+				}
 			} else {
 				console.log('Invalid chartType')
 			}
@@ -414,24 +423,25 @@
 			window.myMixedChart = new Chart(ctx, {
 				type: 'bar',
 				data: getBarChartData(property),
-				options: chartOptions
+				options: barChartOptions
 			});
 		};
 
 		// Render doughnut chart
 		function renderDoughnutChart(property, dataType) {
-			doughnutChartOptions = { ...chartOptions };
-			delete doughnutChartOptions.scales;
-			doughnutChartOptions.animation = {
-				animateScale: false,
-				animateRotate: false
-			}
 			window.myMixedChart = new Chart(ctx, {
 				type: 'doughnut',
 				data: getDoughnutChartData(property, dataType),
 				options: doughnutChartOptions
 			});
 		};
+
+		// $$ Update chart data on the fly
+		// https://www.chartjs.org/docs/latest/developers/updates.html
+		function updateDoughnutChart(property, dataType) {
+			window.myMixedChart.data.datasets[0].data = data[property][dataType];
+			window.myMixedChart.update();
+		}
 
 		// Return full data object for bar charts
 		function getBarChartData(property) {
