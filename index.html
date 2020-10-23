@@ -385,7 +385,7 @@
 				callbacks: {
 					label: (a,b) => {
 						if (a.datasetIndex === 0) {
-							return ` Index: ${Math.round(a.value)}`;
+							return ` Index: ${a.value}`;
 						} else if (a.datasetIndex != 1) {
 							return ` ${b.datasets[a.datasetIndex].label}: ${a.value}%`;
 						}
