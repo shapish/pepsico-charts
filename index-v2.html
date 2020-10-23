@@ -255,8 +255,8 @@
 			ref: '#1E8CF4', // Reference line for index
 			// Doughnut chart colors (up to 15)
 			doughnutColors: ['#E9C46B','#F4A261','#E77051','#2A9D8F','#264653',
-							 '#77919C','#8BD7E8','#4A9AC6','#2A539D','#B56CA2',
-							 '#F28ECE','#FFC6C9','#9C6C6C','#70DBBC','#D0DB70']
+					'#77919C','#8BD7E8','#4A9AC6','#2A539D','#B56CA2',
+					'#F28ECE','#FFC6C9','#9C6C6C','#70DBBC','#D0DB70']
 		}
 		
 
@@ -264,7 +264,6 @@
 
 		/**
 		 * Core chart data
-		 * Note: idx and ref is calculated below
 		 */
 
 		const data = {};
@@ -275,6 +274,7 @@
 			labels: ['Gen Z','Yng Mill','Old Mill','Gen X','Yng Bmr','Old Bmr','Retirees'],
 			shh: [9,21,18,27,14,7,4],
 			thh: [7,17,17,21,15,12,11]
+			// idx is calculated below
 		}
 
 		data.gender = {
@@ -292,8 +292,6 @@
 		}
 
 		data.ethnicity = {
-			// Original names from Pepsico Database:
-			// labels: ['African American','Asian','Caucasian','Hispanic','Other'],
 			labels: ['Afr-Amer','Asian','Caucasian','Hispanic','Other'],
 			shh: [25,12,27,22,14],
 			thh: [25,13,22,27,15]
@@ -312,10 +310,11 @@
 			thh: [35,32,32]
 		}
 
-		// Attach idx (calculated) and ref (100)
+		// $$ To display the index in relationship to the bars, we must divide it by the total number of labels
+		// The same goes for the reference number 100
 		for (let property in data) {
-			data[property].idx = data[property].shh.map((n,i) => Math.round(n / data[property].thh[i] * 100));
-			data[property].ref = data[property].shh.map(() => 100);
+			data[property].idx = data[property].shh.map((n,i) => (n / data[property].thh[i] * 100) / data[property].labels.length);
+			data[property].ref = data[property].shh.map(() => 100 / data[property].labels.length);
 		}
 		console.log('Graph Data:\n', data)
 
@@ -338,13 +337,7 @@
 			legend: {
 				position: 'bottom',
 				labels: {
-					padding: 20,
-					usePointStyle: true,
-					boxWidth: 8,
-					filter: (a) => {
-						a.text = ' ' + a.text;
-						return a.text != ' Ref' ? a : null;
-					}
+					padding: 20
 				}
 			},
 			layout: {
@@ -356,47 +349,38 @@
 			...chartOptions,
 			scales: {
 				yAxes: [{
-					// Left Axis
-					position: 'left',
-					type: 'linear',
-					display: true,
-					id: 'axis-main',
 					ticks: {
 						beginAtZero: true
 					}
-				}, {
-					// Right Axis
-					position: 'right',
-					type: 'linear',
-					display: true,
-					id: 'axis-index',
-					gridLines: {
-						drawOnChartArea: false
-					},
-					ticks: {
-						suggestedMin: 0,
-                    	suggestedMax: 200,
-						stepSize: 25
-					}
 				}]
-			},
-			tooltips: {
-				mode: 'index',
-				callbacks: {
-					label: (a,b) => {
-						if (a.datasetIndex === 0) {
-							return ` Index: ${Math.round(a.value)}`;
-						} else if (a.datasetIndex != 1) {
-							return ` ${b.datasets[a.datasetIndex].label}: ${a.value}%`;
-						}
-					}
-				},
 			},
 			animation: false
 		}
 
 		const doughnutChartOptions = {
 			...chartOptions,
+			callbacks: {
+				// $$ In order to display the index line within the range of the bars, we must
+				// divide it by the number of labels. On hover, we multiply this value again
+				// as to display the correct index value.
+				label: (a,b) => {
+					if (a.datasetIndex === 0) {
+						const index = Math.round(a.value * b.labels.length);
+						return ` Index: ${index}`;
+					} else if (a.datasetIndex != 1) {
+						return ` ${b.datasets[a.datasetIndex].label}: ${a.value}%`;
+					}
+				},
+				// labelColor: (a,b) => {
+				// 	console.log(a.datasetIndex, b.config.data.datasets[a.datasetIndex].backgroundColor)
+				// 	return {
+				// 		// borderColor: b.datasets[a.datasetIndex].backgroundColor,
+				// 		// backgroundColor: b.datasets[a.datasetIndex].backgroundColor
+				// 		borderColor: '#fff',
+				// 		backgroundColor: 'red'
+				// 	};
+				// }
+			},
 			animation: {
 				animateScale: false,
 				animateRotate: false
@@ -471,7 +455,6 @@
 					backgroundColor: colors.idx,
 					data: data[property].idx,
 					fill: false,
-					yAxisID: 'axis-index'
 				}, {
 					type: 'line',
 					label: 'Ref',
@@ -479,24 +462,18 @@
 					borderColor: colors.ref,
 					data: data[property].ref,
 					fill: false,
-					yAxisID: 'axis-index',
-					pointBackgroundColor: 'transparent',
-					pointBorderColor: 'transparent',
-					borderDash: [3,3],
 				}, {
 					type: 'bar',
 					label: 'Segm HH',
 					backgroundColor: colors.shh,
 					borderWidth: 0,
 					data: data[property].shh,
-					yAxisID: 'axis-main'
 				}, {
 					type: 'bar',
 					label: 'Total HH',
 					backgroundColor: colors.thh,
 					data: data[property].thh,
-					borderWidth: 0,
-					yAxisID: 'axis-main'
+					borderWidth: 0
 				}]
 			};
 		}
