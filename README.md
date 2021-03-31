@@ -1,2 +1,2 @@
 ## Preview
-https://shapish.github.io/pepsico-charts/
+https://shapish.github.io/pepsico-cdna-charts/
